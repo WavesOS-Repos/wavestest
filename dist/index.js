@@ -1,58 +1,84 @@
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
 // server/index.ts
 import express2 from "express";
+import helmet from "helmet";
+import compression from "compression";
+import cors from "cors";
 
 // server/routes.ts
 import { createServer } from "http";
 import path from "path";
+import { fileURLToPath } from "url";
 import fs from "fs";
 
+// shared/schema.ts
+var schema_exports = {};
+__export(schema_exports, {
+  downloads: () => downloads,
+  insertDownloadSchema: () => insertDownloadSchema
+});
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, integer } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+var downloads = pgTable("downloads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  filename: text("filename").notNull(),
+  downloadCount: integer("download_count").notNull().default(0),
+  fileType: text("file_type").notNull()
+  // 'iso' or 'wrapper'
+});
+var insertDownloadSchema = createInsertSchema(downloads).pick({
+  filename: true,
+  fileType: true
+});
+
+// server/db.ts
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import ws from "ws";
+neonConfig.webSocketConstructor = ws;
+neonConfig.poolQueryViaFetch = true;
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?"
+  );
+}
+var poolConfig = {
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : { rejectUnauthorized: false }
+};
+var pool = new Pool(poolConfig);
+var db = drizzle({ client: pool, schema: schema_exports });
+
 // server/storage.ts
-import { randomUUID } from "crypto";
-var MemStorage = class {
-  downloads;
-  constructor() {
-    this.downloads = /* @__PURE__ */ new Map();
-    const isoDownload = {
-      id: randomUUID(),
-      filename: "wavesinstaller_ultra.iso",
-      downloadCount: 0,
-      fileType: "iso"
-    };
-    const wrapperDownload = {
-      id: randomUUID(),
-      filename: "waves_wrapper.zip",
-      downloadCount: 0,
-      fileType: "wrapper"
-    };
-    this.downloads.set(isoDownload.filename, isoDownload);
-    this.downloads.set(wrapperDownload.filename, wrapperDownload);
-  }
+import { eq, sql as sql2 } from "drizzle-orm";
+var DatabaseStorage = class {
   async getDownload(filename) {
-    return this.downloads.get(filename);
+    const [download] = await db.select().from(downloads).where(eq(downloads.filename, filename));
+    return download || void 0;
   }
   async createDownload(insertDownload) {
-    const id = randomUUID();
-    const download = {
-      ...insertDownload,
-      id,
-      downloadCount: 0
-    };
-    this.downloads.set(download.filename, download);
+    const [download] = await db.insert(downloads).values(insertDownload).returning();
     return download;
   }
   async incrementDownload(filename, fileType) {
-    let download = this.downloads.get(filename);
+    let download = await this.getDownload(filename);
     if (!download) {
       download = await this.createDownload({ filename, fileType });
     }
-    download.downloadCount += 1;
-    this.downloads.set(filename, download);
-    return download;
+    const [updatedDownload] = await db.update(downloads).set({ downloadCount: sql2`${downloads.downloadCount} + 1` }).where(eq(downloads.filename, filename)).returning();
+    return updatedDownload;
   }
   async getDownloadStats() {
+    const allDownloads = await db.select().from(downloads);
     let isoCount = 0;
     let wrapperCount = 0;
-    for (const download of Array.from(this.downloads.values())) {
+    for (const download of allDownloads) {
       if (download.fileType === "iso") {
         isoCount += download.downloadCount;
       } else if (download.fileType === "wrapper") {
@@ -66,14 +92,16 @@ var MemStorage = class {
     };
   }
 };
-var storage = new MemStorage();
+var storage = new DatabaseStorage();
 
 // server/routes.ts
+var __dirname = path.dirname(fileURLToPath(import.meta.url));
 async function registerRoutes(app2) {
   app2.get("/api/download/iso", async (req, res) => {
     try {
       const filename = "wavesinstaller_ultra.iso";
-      const filePath = path.join(import.meta.dirname, "downloads", filename);
+      const downloadsDir = process.env.NODE_ENV === "production" ? path.join(__dirname, "downloads") : path.join(__dirname, "downloads");
+      const filePath = path.join(downloadsDir, filename);
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ message: "ISO file not found. Please place the ISO file in server/downloads/ folder." });
       }
@@ -96,7 +124,8 @@ async function registerRoutes(app2) {
   app2.get("/api/download/wrapper", async (req, res) => {
     try {
       const filename = "waves_wrapper.zip";
-      const filePath = path.join(import.meta.dirname, "downloads", filename);
+      const downloadsDir = process.env.NODE_ENV === "production" ? path.join(__dirname, "downloads") : path.join(__dirname, "downloads");
+      const filePath = path.join(downloadsDir, filename);
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ message: "ZIP file not found. Please place the ZIP file in server/downloads/ folder." });
       }
@@ -149,13 +178,16 @@ async function registerRoutes(app2) {
 import express from "express";
 import fs2 from "fs";
 import path3 from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
 import { createServer as createViteServer, createLogger } from "vite";
 
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path2 from "path";
+import { fileURLToPath as fileURLToPath2 } from "url";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+var __dirname2 = path2.dirname(fileURLToPath2(import.meta.url));
 var vite_config_default = defineConfig({
   plugins: [
     react(),
@@ -168,14 +200,14 @@ var vite_config_default = defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path2.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path2.resolve(import.meta.dirname, "shared"),
-      "@assets": path2.resolve(import.meta.dirname, "attached_assets")
+      "@": path2.resolve(__dirname2, "client", "src"),
+      "@shared": path2.resolve(__dirname2, "shared"),
+      "@assets": path2.resolve(__dirname2, "attached_assets")
     }
   },
-  root: path2.resolve(import.meta.dirname, "client"),
+  root: path2.resolve(__dirname2, "client"),
   build: {
-    outDir: path2.resolve(import.meta.dirname, "dist/public"),
+    outDir: path2.resolve(__dirname2, "dist/public"),
     emptyOutDir: true,
     minify: true,
     sourcemap: false,
@@ -206,6 +238,7 @@ var vite_config_default = defineConfig({
 
 // server/vite.ts
 import { nanoid } from "nanoid";
+var __dirname3 = path3.dirname(fileURLToPath3(import.meta.url));
 var viteLogger = createLogger();
 function log(message, source = "express") {
   const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
@@ -240,7 +273,7 @@ async function setupVite(app2, server) {
     const url = req.originalUrl;
     try {
       const clientTemplate = path3.resolve(
-        import.meta.dirname,
+        __dirname3,
         "..",
         "client",
         "index.html"
@@ -259,7 +292,7 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path3.resolve(import.meta.dirname, "public");
+  const distPath = path3.resolve(__dirname3, "public");
   if (!fs2.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -272,9 +305,25 @@ function serveStatic(app2) {
 }
 
 // server/index.ts
+if (process.env.NODE_ENV === "development") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 var app = express2();
-app.use(express2.json());
-app.use(express2.urlencoded({ extended: false }));
+app.use(helmet({
+  contentSecurityPolicy: process.env.NODE_ENV === "production" ? void 0 : false,
+  crossOriginEmbedderPolicy: false
+}));
+app.use(compression());
+var corsOptions = {
+  origin: process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL || false : true,
+  credentials: false,
+  // Disable credentials since no auth is used
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"]
+};
+app.use(cors(corsOptions));
+app.use(express2.json({ limit: "10mb" }));
+app.use(express2.urlencoded({ extended: false, limit: "10mb" }));
 app.use((req, res, next) => {
   const start = Date.now();
   const path4 = req.path;

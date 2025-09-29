@@ -1,15 +1,21 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
+import { fileURLToPath } from "url";
 import fs from "fs";
 import { storage } from "./storage";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Download WavesOS ISO endpoint
   app.get("/api/download/iso", async (req, res) => {
     try {
       const filename = "wavesinstaller_ultra.iso";
-      const filePath = path.join(import.meta.dirname, "downloads", filename);
+      const downloadsDir = process.env.NODE_ENV === "production" 
+        ? path.join(__dirname, "downloads")  // In production, downloads are copied to dist/downloads
+        : path.join(__dirname, "downloads"); // In development, use server/downloads
+      const filePath = path.join(downloadsDir, filename);
 
       // Check if file exists
       if (!fs.existsSync(filePath)) {
@@ -42,7 +48,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/download/wrapper", async (req, res) => {
     try {
       const filename = "waves_wrapper.zip";
-      const filePath = path.join(import.meta.dirname, "downloads", filename);
+      const downloadsDir = process.env.NODE_ENV === "production" 
+        ? path.join(__dirname, "downloads")  // In production, downloads are copied to dist/downloads
+        : path.join(__dirname, "downloads"); // In development, use server/downloads
+      const filePath = path.join(downloadsDir, filename);
 
       // Check if file exists
       if (!fs.existsSync(filePath)) {
