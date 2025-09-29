@@ -42,24 +42,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDownloadStats(): Promise<{ iso: number; wrapper: number; total: number }> {
-    const allDownloads = await db.select().from(downloads);
-    
-    let isoCount = 0;
-    let wrapperCount = 0;
-    
-    for (const download of allDownloads) {
-      if (download.fileType === "iso") {
-        isoCount += download.downloadCount;
-      } else if (download.fileType === "wrapper") {
-        wrapperCount += download.downloadCount;
+    try {
+      const allDownloads = await db.select().from(downloads);
+      
+      // Handle case where query returns null or undefined
+      if (!allDownloads || !Array.isArray(allDownloads)) {
+        return {
+          iso: 0,
+          wrapper: 0,
+          total: 0
+        };
       }
+      
+      let isoCount = 0;
+      let wrapperCount = 0;
+      
+      for (const download of allDownloads) {
+        if (download && download.fileType === "iso") {
+          isoCount += download.downloadCount || 0;
+        } else if (download && download.fileType === "wrapper") {
+          wrapperCount += download.downloadCount || 0;
+        }
+      }
+      
+      return {
+        iso: isoCount,
+        wrapper: wrapperCount,
+        total: isoCount + wrapperCount
+      };
+    } catch (error) {
+      console.error("Error fetching download stats:", error);
+      return {
+        iso: 0,
+        wrapper: 0,
+        total: 0
+      };
     }
-    
-    return {
-      iso: isoCount,
-      wrapper: wrapperCount,
-      total: isoCount + wrapperCount
-    };
   }
 }
 
