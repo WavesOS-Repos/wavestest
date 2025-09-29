@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 6%);
+  --foreground: hsl(200, 6.67%, 91.18%);
+  --card: hsl(228, 9.8%, 10%);
+  --card-foreground: hsl(0, 0%, 85.1%);
+  --popover: hsl(0, 0%, 6%);
+  --popover-foreground: hsl(200, 6.67%, 91.18%);
+  --primary: hsl(261, 83%, 58%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(195, 15.38%, 94.9%);
+  --secondary-foreground: hsl(210, 25%, 7.84%);
+  --muted: hsl(0, 0%, 9.41%);
+  --muted-foreground: hsl(210, 3.39%, 46.27%);
+  --accent: hsl(205.71, 70%, 7.84%);
+  --accent-foreground: hsl(203.77, 87.6%, 52.55%);
+  --destructive: hsl(356.3, 90.56%, 54.31%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(210, 5.26%, 14.9%);
+  --input: hsl(207.69, 27.66%, 18.43%);
+  --ring: hsl(202.82, 89.12%, 53.14%);
+  
+  /* Cyber colors - muted versions */
+  --cyber-red: hsl(0, 59%, 25%);
+  --cyber-blue: hsl(218, 70%, 20%);
+  --cyber-green: hsl(142, 57%, 16%);
+  --cyber-purple: hsl(271, 81%, 20%);
+  --cyber-cyan: hsl(188, 86%, 20%);
+  --cyber-orange: hsl(25, 95%, 20%);
+  
+  /* Dark background */
+  --dark-bg: hsl(0, 0%, 6%);
+  
+  /* Font families */
+  --font-orbitron: 'Orbitron', monospace;
+  --font-inter: 'Inter', sans-serif;
+  --font-sans: var(--font-inter);
+  --font-serif: Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: hsl(0, 0%, 6%);
+  --foreground: hsl(200, 6.67%, 91.18%);
+  --card: hsl(228, 9.8%, 10%);
+  --card-foreground: hsl(0, 0%, 85.1%);
+  --popover: hsl(0, 0%, 6%);
+  --popover-foreground: hsl(200, 6.67%, 91.18%);
+  --primary: hsl(261, 83%, 58%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(195, 15.38%, 94.9%);
+  --secondary-foreground: hsl(210, 25%, 7.84%);
+  --muted: hsl(0, 0%, 9.41%);
+  --muted-foreground: hsl(210, 3.39%, 46.27%);
+  --accent: hsl(205.71, 70%, 7.84%);
+  --accent-foreground: hsl(203.77, 87.6%, 52.55%);
+  --destructive: hsl(356.3, 90.56%, 54.31%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(210, 5.26%, 14.9%);
+  --input: hsl(207.69, 27.66%, 18.43%);
+  --ring: hsl(202.82, 89.12%, 53.14%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter antialiased;
+    background-color: var(--dark-bg);
+    overflow-x: hidden;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .cyber-glow {
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .cyber-glow:hover {
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
+    transform: translateY(-2px);
+  }
+  
+  .gradient-text {
+    background: linear-gradient(45deg, #3B82F6, #10B981, #8B5CF6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .grid-overlay {
+    background-image: 
+      linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .font-orbitron {
+    font-family: var(--font-orbitron);
+  }
+
+  .font-inter {
+    font-family: var(--font-inter);
+  }
+}
+
+@layer utilities {
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite alternate;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-particle {
+    animation: particle 20s linear infinite;
+  }
+}
+
+@keyframes glow-pulse {
+  0% { 
+    box-shadow: 0 0 5px rgba(139, 92, 246, 0.3); 
+  }
+  100% { 
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); 
+  }
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px); 
+  }
+  50% { 
+    transform: translateY(-20px); 
+  }
+}
+
+@keyframes particle {
+  0% { 
+    transform: translateY(100vh) translateX(0px); 
+    opacity: 0; 
+  }
+  10% { 
+    opacity: 1; 
+  }
+  90% { 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateY(-100vh) translateX(100px); 
+    opacity: 0; 
+  }
+}
