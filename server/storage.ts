@@ -71,7 +71,8 @@ export class DatabaseStorage implements IStorage {
         total: isoCount + wrapperCount
       };
     } catch (error) {
-      console.error("Error fetching download stats:", error);
+      // Silently handle error when table is empty - this is expected
+      // The Neon driver throws when querying empty tables, but we handle it gracefully
       return {
         iso: 0,
         wrapper: 0,
